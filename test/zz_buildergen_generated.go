@@ -89,6 +89,8 @@ func (b *TestBuilder) Build() Test {
 func NewTestABuilder() *TestABuilder {
 	builder := &TestABuilder{}
 	builder.model = TestA{}
+	builder.model.Test1Tag()
+	builder.model.Test2Tag()
 	builder.testb = NewTestBBuilder()
 	return builder
 }
@@ -111,6 +113,7 @@ func (b *TestABuilder) Build() TestA {
 func NewTestBBuilder() *TestBBuilder {
 	builder := &TestBBuilder{}
 	builder.model = TestB{}
+	builder.model.TestTag()
 	return builder
 }
 

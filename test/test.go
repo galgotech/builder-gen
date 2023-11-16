@@ -26,10 +26,29 @@ type Test struct {
 	TestBAlias       TestBAlias
 }
 
+// +builder-gen:new-call=Test1Tag,Test2Tag
 type TestA struct {
 	TestB TestB
 }
 
+func (t *TestA) Test1Tag() {
+
+}
+
+func (t *TestA) Test2Tag() {
+
+}
+
+// +builder-gen:new-call=TestTag
 type TestB struct {
 	TestBKey string
+}
+
+func (t *TestB) TestTag() {
+
+}
+
+// +builder-gen:ignore=true
+type TestC struct {
+	Key int
 }
