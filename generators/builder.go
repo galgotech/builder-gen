@@ -304,7 +304,10 @@ func (g *genDeepCopy) structBuilder(sw *generator.SnippetWriter, t *types.Type) 
 				sw.Do("$.property$ []*$.name$Builder \n", argsMember)
 			}
 		} else if umt.Kind == types.Struct {
-			sw.Do("$.property$ *$.name$Builder \n", argsMember)
+			if !g.isOtherPackage(umt.Name.Package) || !g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
+				sw.Do("$.property$ *$.name$Builder \n", argsMember)
+			}
+
 		}
 	}
 	sw.Do("}\n", generator.Args{})
@@ -354,14 +357,20 @@ func (g *genDeepCopy) structMethods(sw *generator.SnippetWriter, t *types.Type) 
 				sw.Do("}\n\n", generator.Args{})
 			}
 		} else if umt.Kind == types.Struct {
-			sw.Do("func (b *$.typeBase|raw$Builder) $.name$() *$.type|raw$Builder {\n", argsMember)
-			if mt.Kind == types.Pointer {
-				sw.Do("if b.$.nameMethod$ == nil {\n", argsMember)
-				sw.Do("b.$.nameMethod$ = New$.type|raw$Builder()\n", argsMember)
-				sw.Do("}\n", generator.Args{})
+			if !g.isOtherPackage(umt.Name.Package) || !g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
+				sw.Do("func (b *$.typeBase|raw$Builder) $.name$() *$.type|raw$Builder {\n", argsMember)
+				if mt.Kind == types.Pointer {
+					sw.Do("if b.$.nameMethod$ == nil {\n", argsMember)
+					sw.Do("b.$.nameMethod$ = New$.type|raw$Builder()\n", argsMember)
+					sw.Do("}\n", generator.Args{})
+				}
+				sw.Do("return b.$.nameMethod$\n", argsMember)
+				sw.Do("}\n\n", generator.Args{})
+			} else {
+				sw.Do("func (b *$.typeBase|raw$Builder) $.name$(input $.typeAlias|raw$)  {\n", argsMember)
+				sw.Do("b.model.$.name$ = input\n", argsMember)
+				sw.Do("}\n\n", generator.Args{})
 			}
-			sw.Do("return b.$.nameMethod$\n", argsMember)
-			sw.Do("}\n\n", generator.Args{})
 		}
 	}
 }
@@ -400,13 +409,15 @@ func (g *genDeepCopy) structMethodBuild(sw *generator.SnippetWriter, t *types.Ty
 			}
 		} else if umt.Kind == types.Map {
 		} else if umt.Kind == types.Struct {
-			if mt.Kind == types.Pointer {
-				sw.Do("if b.$.nameMethod$ != nil {\n", argsMember)
-				sw.Do("$.nameMethod$ := b.$.nameMethod$.Build() \n", argsMember)
-				sw.Do("b.model.$.name$ = &$.nameMethod$\n", argsMember)
-				sw.Do("}\n", generator.Args{})
-			} else {
-				sw.Do("b.model.$.name$ = b.$.nameMethod$.Build()\n", argsMember)
+			if !g.isOtherPackage(umt.Name.Package) || !g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
+				if mt.Kind == types.Pointer {
+					sw.Do("if b.$.nameMethod$ != nil {\n", argsMember)
+					sw.Do("$.nameMethod$ := b.$.nameMethod$.Build() \n", argsMember)
+					sw.Do("b.model.$.name$ = &$.nameMethod$\n", argsMember)
+					sw.Do("}\n", generator.Args{})
+				} else {
+					sw.Do("b.model.$.name$ = b.$.nameMethod$.Build()\n", argsMember)
+				}
 			}
 		}
 	}

@@ -14,11 +14,14 @@
 
 package test
 
+import "k8s.io/apimachinery/pkg/util/intstr"
+
 type TestBAlias = []*TestB
 
 type Test struct {
 	Key              string
 	Tas              int
+	TestPkgType      *intstr.IntOrString
 	TestA            TestA
 	TestB            *TestB
 	TestBList        []TestB
