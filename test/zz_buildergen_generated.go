@@ -6,6 +6,8 @@
 package test
 
 import (
+	json "encoding/json"
+
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -58,6 +60,10 @@ func (b *TestBuilder) AddTestBList() *TestBBuilder {
 	return builder
 }
 
+func (b *TestBuilder) TestBMap(input map[string]TestB) {
+	b.model.TestBMap = input
+}
+
 func (b *TestBuilder) AddTestBListPointer() *TestBBuilder {
 	builder := NewTestBBuilder()
 	b.testblistpointer = append(b.testblistpointer, builder)
@@ -68,6 +74,14 @@ func (b *TestBuilder) AddTestBAlias() *TestBBuilder {
 	builder := NewTestBBuilder()
 	b.testbalias = append(b.testbalias, builder)
 	return builder
+}
+
+func (b *TestBuilder) TestBAliasMap(input map[string]*TestB) {
+	b.model.TestBAliasMap = input
+}
+
+func (b *TestBuilder) TestJsonAlias(input json.RawMessage) {
+	b.model.TestJsonAlias = input
 }
 
 func (b *TestBuilder) Build() Test {

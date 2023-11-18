@@ -273,8 +273,17 @@ func (g *genDeepCopy) newBuilderFunc(sw *generator.SnippetWriter, t *types.Type)
 			if !umt.Elem.IsPrimitive() {
 				sw.Do("builder.$.nameMethod$ = []*$.name$Builder{}\n", argsMember)
 			}
+		} else if umt.Kind == types.Map {
+			if !g.isOtherPackage(umt.Name.Package) || !g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
+				if !umt.Elem.IsPrimitive() {
+					argsMember["mapKey"] = umt.Key.Name.Name
+					sw.Do("builder.$.nameMethod$ = map[$.mapKey$]*$.name$Builder{}\n", argsMember)
+				}
+			}
 		} else if umt.Kind == types.Struct && mt.Kind != types.Pointer {
-			sw.Do("builder.$.nameMethod$ = New$.name$Builder()\n", argsMember)
+			if !g.isOtherPackage(umt.Name.Package) || !g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
+				sw.Do("builder.$.nameMethod$ = New$.name$Builder()\n", argsMember)
+			}
 		}
 	}
 	sw.Do("return builder\n", generator.Args{})
@@ -302,6 +311,13 @@ func (g *genDeepCopy) structBuilder(sw *generator.SnippetWriter, t *types.Type) 
 		if umt.Kind == types.Slice {
 			if !umt.Elem.IsPrimitive() {
 				sw.Do("$.property$ []*$.name$Builder \n", argsMember)
+			}
+		} else if umt.Kind == types.Map {
+			if !g.isOtherPackage(umt.Name.Package) || !g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
+				if !umt.Elem.IsPrimitive() {
+					argsMember["mapKey"] = umt.Key.Name.Name
+					sw.Do("$.property$ map[$.mapKey$]*$.name$Builder \n", argsMember)
+				}
 			}
 		} else if umt.Kind == types.Struct {
 			if !g.isOtherPackage(umt.Name.Package) || !g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
@@ -343,7 +359,6 @@ func (g *genDeepCopy) structMethods(sw *generator.SnippetWriter, t *types.Type) 
 				sw.Do("}\n\n", generator.Args{})
 			} else {
 				argsMember["nameNew"] = types.ParseFullyQualifiedName(umt.Elem.Name.Name).Name
-				argsMember["type"] = umt.Elem
 				sw.Do("func (b *$.typeBase|raw$Builder) Add$.name$() *$.nameNew$Builder {\n", argsMember)
 				sw.Do("builder := New$.nameNew$Builder()\n", argsMember)
 				sw.Do("b.$.nameMethod$ = append(b.$.nameMethod$, builder)\n", argsMember)
@@ -351,9 +366,17 @@ func (g *genDeepCopy) structMethods(sw *generator.SnippetWriter, t *types.Type) 
 				sw.Do("}\n\n", generator.Args{})
 			}
 		} else if umt.Kind == types.Map {
-			if umt.Elem.IsPrimitive() {
+			if umt.Elem.IsPrimitive() || g.isOtherPackage(umt.Name.Package) || g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
 				sw.Do("func (b *$.typeBase|raw$Builder) $.name$(input $.typeAlias|raw$)  {\n", argsMember)
 				sw.Do("b.model.$.name$ = input\n", argsMember)
+				sw.Do("}\n\n", generator.Args{})
+			} else {
+				argsMember["mapKey"] = umt.Key.Name.Name
+				argsMember["nameNew"] = types.ParseFullyQualifiedName(umt.Elem.Name.Name).Name
+				sw.Do("func (b *$.typeBase|raw$Builder) Add$.name$(key $.mapKey$) *$.nameNew$Builder {\n", argsMember)
+				sw.Do("builder := New$.nameNew$Builder()\n", argsMember)
+				sw.Do("b.$.nameMethod$[key] = builder\n", argsMember)
+				sw.Do("return builder\n", argsMember)
 				sw.Do("}\n\n", generator.Args{})
 			}
 		} else if umt.Kind == types.Struct {

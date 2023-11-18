@@ -14,9 +14,15 @@
 
 package test
 
-import "k8s.io/apimachinery/pkg/util/intstr"
+import (
+	"encoding/json"
+
+	"k8s.io/apimachinery/pkg/util/intstr"
+)
 
 type TestBAlias = []*TestB
+type TestBAliasMap = map[string]*TestB
+type TestJsonAlias = json.RawMessage
 
 type Test struct {
 	Key              string
@@ -25,8 +31,12 @@ type Test struct {
 	TestA            TestA
 	TestB            *TestB
 	TestBList        []TestB
+	TestBMap         map[string]TestB
 	TestBListPointer []*TestB
-	TestBAlias       TestBAlias
+	// TestBListPointerPointer []**TestB
+	TestBAlias    TestBAlias
+	TestBAliasMap TestBAliasMap
+	TestJsonAlias TestJsonAlias
 }
 
 // +builder-gen:new-call=Test1Tag,Test2Tag
