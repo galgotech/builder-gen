@@ -60,6 +60,14 @@ func (b *TestBuilder) AddTestBList() *TestBBuilder {
 	return builder
 }
 
+func (b *TestBuilder) RemoveTestBList(remove *TestBBuilder) {
+	for i, val := range b.testblist {
+		if val == remove {
+			b.testblist[i] = b.testblist[len(b.testblist)-1]
+			b.testblist = b.testblist[:len(b.testblist)-1]
+		}
+	}
+}
 func (b *TestBuilder) TestBMap(input map[string]TestB) {
 	b.model.TestBMap = input
 }
@@ -70,12 +78,28 @@ func (b *TestBuilder) AddTestBListPointer() *TestBBuilder {
 	return builder
 }
 
+func (b *TestBuilder) RemoveTestBListPointer(remove *TestBBuilder) {
+	for i, val := range b.testblistpointer {
+		if val == remove {
+			b.testblistpointer[i] = b.testblistpointer[len(b.testblistpointer)-1]
+			b.testblistpointer = b.testblistpointer[:len(b.testblistpointer)-1]
+		}
+	}
+}
 func (b *TestBuilder) AddTestBAlias() *TestBBuilder {
 	builder := NewTestBBuilder()
 	b.testbalias = append(b.testbalias, builder)
 	return builder
 }
 
+func (b *TestBuilder) RemoveTestBAlias(remove *TestBBuilder) {
+	for i, val := range b.testbalias {
+		if val == remove {
+			b.testbalias[i] = b.testbalias[len(b.testbalias)-1]
+			b.testbalias = b.testbalias[:len(b.testbalias)-1]
+		}
+	}
+}
 func (b *TestBuilder) TestBAliasMap(input map[string]*TestB) {
 	b.model.TestBAliasMap = input
 }

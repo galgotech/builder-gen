@@ -379,6 +379,15 @@ func (g *genDeepCopy) structMethods(sw *generator.SnippetWriter, t *types.Type) 
 				sw.Do("b.$.nameMethod$ = append(b.$.nameMethod$, builder)\n", argsMember)
 				sw.Do("return builder\n", argsMember)
 				sw.Do("}\n\n", generator.Args{})
+
+				sw.Do("func (b *$.typeBase|raw$Builder) Remove$.name$(remove *$.nameNew$Builder) {\n", argsMember)
+				sw.Do("for i, val := range b.$.nameMethod$ {\n", argsMember)
+				sw.Do("if val == remove {\n", generator.Args{})
+				sw.Do("b.$.nameMethod$[i] = b.$.nameMethod$[len(b.$.nameMethod$)-1]\n", argsMember)
+				sw.Do("b.$.nameMethod$ = b.$.nameMethod$[:len(b.$.nameMethod$)-1]\n", argsMember)
+				sw.Do("}\n", generator.Args{})
+				sw.Do("}\n", generator.Args{})
+				sw.Do("}\n", generator.Args{})
 			}
 		} else if umt.Kind == types.Map {
 			if umt.Elem.IsPrimitive() || g.isOtherPackage(umt.Name.Package) || g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
