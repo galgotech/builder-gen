@@ -65,3 +65,22 @@ func (t *TestB) TestTag() {
 type TestC struct {
 	Key int
 }
+
+type TestD struct {
+	KeyD int
+}
+
+type TestE struct {
+	*TestD
+	KeyE  int
+	TestG *TestG
+}
+
+// +builder-gen:embedded-ignore-method=TestE
+type TestF struct {
+	TestE
+}
+
+type TestG struct {
+	KeyG int
+}

@@ -30,9 +30,10 @@ import (
 
 // This is the comment tag that carries parameters for deep-copy generation.
 const (
-	tagEnabledName       = "builder-gen"
-	ignoreTagName        = tagEnabledName + ":ignore"
-	newMethodCallTagName = tagEnabledName + ":new-call"
+	tagEnabledName              = "builder-gen"
+	ignoreTagName               = tagEnabledName + ":ignore"
+	newMethodCallTagName        = tagEnabledName + ":new-call"
+	embeddedIgnoreMethodTagName = tagEnabledName + ":embedded-ignore-method"
 )
 
 func extractIgnoreTag(t *types.Type) bool {
@@ -45,9 +46,17 @@ func extractIgnoreTag(t *types.Type) bool {
 }
 
 func extractNewMethodCallTag(t *types.Type) []string {
+	return extractTag(t, newMethodCallTagName)
+}
+
+func extractEmbbedIgnoreMethodTag(t *types.Type) []string {
+	return extractTag(t, embeddedIgnoreMethodTagName)
+}
+
+func extractTag(t *types.Type, tagName string) []string {
 	var result []string
 	comments := append(append([]string{}, t.SecondClosestCommentLines...), t.CommentLines...)
-	values := types.ExtractCommentTags("+", comments)[newMethodCallTagName]
+	values := types.ExtractCommentTags("+", comments)[tagName]
 	for _, v := range values {
 		if len(v) == 0 {
 			continue
@@ -77,7 +86,7 @@ func deepCopyNamer() *namer.NameStrategy {
 // NameSystems returns the name system used by the generators in this package.
 func NameSystems() namer.NameSystems {
 	return namer.NameSystems{
-		"public": deepCopyNamer(),
+		"public": namer.NewPublicNamer(1),
 		"raw":    namer.NewRawNamer("", nil),
 	}
 }
@@ -146,7 +155,6 @@ type genDeepCopy struct {
 	generator.DefaultGen
 	targetPackage string
 	imports       namer.ImportTracker
-	typesForInit  []*types.Type
 }
 
 func NewGenDeepCopy(sanitizedName, targetPackage string) generator.Generator {
@@ -156,7 +164,6 @@ func NewGenDeepCopy(sanitizedName, targetPackage string) generator.Generator {
 		},
 		targetPackage: targetPackage,
 		imports:       generator.NewImportTracker(),
-		typesForInit:  make([]*types.Type, 0),
 	}
 }
 
@@ -173,7 +180,6 @@ func (g *genDeepCopy) Filter(c *generator.Context, t *types.Type) bool {
 		return false
 	}
 	klog.V(4).Infof("Type %v is copyable", t)
-	g.typesForInit = append(g.typesForInit, t)
 	return true
 }
 
@@ -281,7 +287,9 @@ func (g *genDeepCopy) newBuilderFunc(sw *generator.SnippetWriter, t *types.Type)
 				}
 			}
 		} else if umt.Kind == types.Struct && mt.Kind != types.Pointer {
-			if !g.isOtherPackage(umt.Name.Package) || !g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
+			if m.Embedded {
+				sw.Do("builder.$.name$Builder = *New$.name$Builder()\n", argsMember)
+			} else if !g.isOtherPackage(umt.Name.Package) || !g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
 				sw.Do("builder.$.nameMethod$ = New$.name$Builder()\n", argsMember)
 			}
 		}
@@ -320,8 +328,15 @@ func (g *genDeepCopy) structBuilder(sw *generator.SnippetWriter, t *types.Type) 
 				}
 			}
 		} else if umt.Kind == types.Struct {
-			if !g.isOtherPackage(umt.Name.Package) || !g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
-				sw.Do("$.property$ *$.name$Builder \n", argsMember)
+			if m.Embedded {
+				pointer := ""
+				if mt.Kind == types.Pointer {
+					pointer = "*"
+				}
+				sw.Do(fmt.Sprintf("%s$.name$Builder\n", pointer), argsMember)
+
+			} else if !g.isOtherPackage(umt.Name.Package) || !g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
+				sw.Do("$.property$ *$.name$Builder\n", argsMember)
 			}
 
 		}
@@ -380,7 +395,28 @@ func (g *genDeepCopy) structMethods(sw *generator.SnippetWriter, t *types.Type) 
 				sw.Do("}\n\n", generator.Args{})
 			}
 		} else if umt.Kind == types.Struct {
-			if !g.isOtherPackage(umt.Name.Package) || !g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
+			if m.Embedded {
+				ignoreMethods := extractEmbbedIgnoreMethodTag(t)
+				ignore := false
+				for _, method := range ignoreMethods {
+					if method == argsMember["name"] {
+						ignore = true
+					}
+				}
+
+				if !ignore {
+					sw.Do("func (b *$.typeBase|raw$Builder) $.name$() *$.type|raw$Builder {\n", argsMember)
+					if mt.Kind == types.Pointer {
+						sw.Do("if b.$.name$Builder == nil {\n", argsMember)
+						sw.Do("b.$.name$Builder = New$.type|raw$Builder()\n", argsMember)
+						sw.Do("}\n", generator.Args{})
+						sw.Do("return b.$.name$Builder\n", argsMember)
+					} else {
+						sw.Do("return &b.$.name$Builder\n", argsMember)
+					}
+					sw.Do("}\n\n", generator.Args{})
+				}
+			} else if !g.isOtherPackage(umt.Name.Package) || !g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
 				sw.Do("func (b *$.typeBase|raw$Builder) $.name$() *$.type|raw$Builder {\n", argsMember)
 				if mt.Kind == types.Pointer {
 					sw.Do("if b.$.nameMethod$ == nil {\n", argsMember)
@@ -402,6 +438,7 @@ func (g *genDeepCopy) structMethodBuild(sw *generator.SnippetWriter, t *types.Ty
 	args := generator.Args{
 		"type": t,
 	}
+
 	sw.Do("func (b *$.type|raw$Builder) Build() $.type|raw$ {\n", args)
 	for _, m := range t.Members {
 		mt := m.Type
@@ -432,7 +469,16 @@ func (g *genDeepCopy) structMethodBuild(sw *generator.SnippetWriter, t *types.Ty
 			}
 		} else if umt.Kind == types.Map {
 		} else if umt.Kind == types.Struct {
-			if !g.isOtherPackage(umt.Name.Package) || !g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
+			if m.Embedded {
+				if mt.Kind == types.Pointer {
+					sw.Do("if b.$.name$Builder != nil {\n", argsMember)
+					sw.Do("$.nameMethod$ := b.$.name$Builder.Build() \n", argsMember)
+					sw.Do("b.model.$.name$ = &$.nameMethod$ \n", argsMember)
+					sw.Do("}\n", generator.Args{})
+				} else {
+					sw.Do("b.model.$.name$ = b.$.name$Builder.Build() \n", argsMember)
+				}
+			} else if !g.isOtherPackage(umt.Name.Package) || !g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
 				if mt.Kind == types.Pointer {
 					sw.Do("if b.$.nameMethod$ != nil {\n", argsMember)
 					sw.Do("$.nameMethod$ := b.$.nameMethod$.Build() \n", argsMember)
