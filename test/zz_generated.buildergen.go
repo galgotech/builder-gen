@@ -31,16 +31,19 @@ type TestBuilder struct {
 	testbalias       []*TestBBuilder
 }
 
-func (b *TestBuilder) Key(input string) {
+func (b *TestBuilder) Key(input string) *TestBuilder {
 	b.model.Key = input
+	return b
 }
 
-func (b *TestBuilder) Tas(input int) {
+func (b *TestBuilder) Tas(input int) *TestBuilder {
 	b.model.Tas = input
+	return b
 }
 
-func (b *TestBuilder) TestPkgType(input *intstr.IntOrString) {
+func (b *TestBuilder) TestPkgType(input *intstr.IntOrString) *TestBuilder {
 	b.model.TestPkgType = input
+	return b
 }
 
 func (b *TestBuilder) TestA() *TestABuilder {
@@ -68,8 +71,9 @@ func (b *TestBuilder) RemoveTestBList(remove *TestBBuilder) {
 		}
 	}
 }
-func (b *TestBuilder) TestBMap(input map[string]TestB) {
+func (b *TestBuilder) TestBMap(input map[string]TestB) *TestBuilder {
 	b.model.TestBMap = input
+	return b
 }
 
 func (b *TestBuilder) AddTestBListPointer() *TestBBuilder {
@@ -100,12 +104,14 @@ func (b *TestBuilder) RemoveTestBAlias(remove *TestBBuilder) {
 		}
 	}
 }
-func (b *TestBuilder) TestBAliasMap(input map[string]*TestB) {
+func (b *TestBuilder) TestBAliasMap(input map[string]*TestB) *TestBuilder {
 	b.model.TestBAliasMap = input
+	return b
 }
 
-func (b *TestBuilder) TestJsonAlias(input json.RawMessage) {
+func (b *TestBuilder) TestJsonAlias(input json.RawMessage) *TestBuilder {
 	b.model.TestJsonAlias = input
+	return b
 }
 
 func (b *TestBuilder) Build() Test {
@@ -167,8 +173,9 @@ type TestBBuilder struct {
 	model TestB
 }
 
-func (b *TestBBuilder) TestBKey(input string) {
+func (b *TestBBuilder) TestBKey(input string) *TestBBuilder {
 	b.model.TestBKey = input
+	return b
 }
 
 func (b *TestBBuilder) Build() TestB {
@@ -186,8 +193,9 @@ type TestDBuilder struct {
 	model TestD
 }
 
-func (b *TestDBuilder) KeyD(input int) {
+func (b *TestDBuilder) KeyD(input int) *TestDBuilder {
 	b.model.KeyD = input
+	return b
 }
 
 func (b *TestDBuilder) Build() TestD {
@@ -214,8 +222,14 @@ func (b *TestEBuilder) TestD() *TestDBuilder {
 	return b.TestDBuilder
 }
 
-func (b *TestEBuilder) KeyE(input int) {
+func (b *TestEBuilder) KeyD(input int) *TestEBuilder {
+	b.TestDBuilder.KeyD(input)
+	return b
+}
+
+func (b *TestEBuilder) KeyE(input int) *TestEBuilder {
 	b.model.KeyE = input
+	return b
 }
 
 func (b *TestEBuilder) TestG() *TestGBuilder {
@@ -250,6 +264,11 @@ type TestFBuilder struct {
 	TestEBuilder
 }
 
+func (b *TestFBuilder) KeyE(input int) *TestFBuilder {
+	b.TestEBuilder.KeyE(input)
+	return b
+}
+
 func (b *TestFBuilder) Build() TestF {
 	b.model.TestE = b.TestEBuilder.Build()
 	return b.model
@@ -266,8 +285,9 @@ type TestGBuilder struct {
 	model TestG
 }
 
-func (b *TestGBuilder) KeyG(input int) {
+func (b *TestGBuilder) KeyG(input int) *TestGBuilder {
 	b.model.KeyG = input
+	return b
 }
 
 func (b *TestGBuilder) Build() TestG {

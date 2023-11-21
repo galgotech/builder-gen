@@ -364,13 +364,15 @@ func (g *genDeepCopy) structMethods(sw *generator.SnippetWriter, t *types.Type) 
 		if umt.Kind == types.Unsupported {
 			klog.V(5).Infof("type unsupported %v %v", t, m.Name)
 		} else if umt.IsPrimitive() {
-			sw.Do("func (b *$.typeBase|raw$Builder) $.name$(input $.typeAlias|raw$)  {\n", argsMember)
+			sw.Do("func (b *$.typeBase|raw$Builder) $.name$(input $.typeAlias|raw$) *$.typeBase|raw$Builder {\n", argsMember)
 			sw.Do("b.model.$.name$ = input\n", argsMember)
+			sw.Do("return b\n", generator.Args{})
 			sw.Do("}\n\n", generator.Args{})
 		} else if umt.Kind == types.Slice {
 			if umt.Elem.IsPrimitive() {
-				sw.Do("func (b *$.typeBase|raw$Builder) $.name$(input $.typeAlias|raw$)  {\n", argsMember)
+				sw.Do("func (b *$.typeBase|raw$Builder) $.name$(input $.typeAlias|raw$) *$.typeBase|raw$Builder {\n", argsMember)
 				sw.Do("b.model.$.name$ = input\n", argsMember)
+				sw.Do("return b\n", generator.Args{})
 				sw.Do("}\n\n", generator.Args{})
 			} else {
 				argsMember["nameNew"] = types.ParseFullyQualifiedName(umt.Elem.Name.Name).Name
@@ -391,8 +393,9 @@ func (g *genDeepCopy) structMethods(sw *generator.SnippetWriter, t *types.Type) 
 			}
 		} else if umt.Kind == types.Map {
 			if umt.Elem.IsPrimitive() || g.isOtherPackage(umt.Name.Package) || g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
-				sw.Do("func (b *$.typeBase|raw$Builder) $.name$(input $.typeAlias|raw$)  {\n", argsMember)
+				sw.Do("func (b *$.typeBase|raw$Builder) $.name$(input $.typeAlias|raw$) *$.typeBase|raw$Builder {\n", argsMember)
 				sw.Do("b.model.$.name$ = input\n", argsMember)
+				sw.Do("return b\n", generator.Args{})
 				sw.Do("}\n\n", generator.Args{})
 			} else {
 				argsMember["mapKey"] = umt.Key.Name.Name
@@ -425,6 +428,26 @@ func (g *genDeepCopy) structMethods(sw *generator.SnippetWriter, t *types.Type) 
 					}
 					sw.Do("}\n\n", generator.Args{})
 				}
+
+				for _, em := range umt.Members {
+					if em.Type.IsPrimitive() {
+						argsMemberEmbedded := generator.Args{
+							"typeBase":   argsMember["typeBase"],
+							"type":       argsMember["type"],
+							"typeEmbbed": em.Type,
+							"typeAlias":  argsMember["typeAlias"],
+							"name":       argsMember["name"],
+							"nameEmbbed": em.Name,
+							"nameMethod": argsMember["nameMethod"],
+						}
+						sw.Do("func (b *$.typeBase|raw$Builder) $.nameEmbbed$(input $.typeEmbbed|raw$) *$.typeBase|raw$Builder {\n", argsMemberEmbedded)
+						sw.Do("b.$.name$Builder.$.nameEmbbed$(input)\n", argsMemberEmbedded)
+						sw.Do("return b\n", generator.Args{})
+						sw.Do("}\n\n", generator.Args{})
+						fmt.Println(em.Name)
+					}
+				}
+
 			} else if !g.isOtherPackage(umt.Name.Package) || !g.isOtherPackage(types.ParseFullyQualifiedName(umt.Name.Name).Package) {
 				sw.Do("func (b *$.typeBase|raw$Builder) $.name$() *$.type|raw$Builder {\n", argsMember)
 				if mt.Kind == types.Pointer {
@@ -435,8 +458,9 @@ func (g *genDeepCopy) structMethods(sw *generator.SnippetWriter, t *types.Type) 
 				sw.Do("return b.$.nameMethod$\n", argsMember)
 				sw.Do("}\n\n", generator.Args{})
 			} else {
-				sw.Do("func (b *$.typeBase|raw$Builder) $.name$(input $.typeAlias|raw$)  {\n", argsMember)
+				sw.Do("func (b *$.typeBase|raw$Builder) $.name$(input $.typeAlias|raw$) *$.typeBase|raw$Builder {\n", argsMember)
 				sw.Do("b.model.$.name$ = input\n", argsMember)
+				sw.Do("return b\n", generator.Args{})
 				sw.Do("}\n\n", generator.Args{})
 			}
 		}
