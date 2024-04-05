@@ -444,7 +444,6 @@ func (g *genDeepCopy) structMethods(sw *generator.SnippetWriter, t *types.Type) 
 						sw.Do("b.$.name$Builder.$.nameEmbbed$(input)\n", argsMemberEmbedded)
 						sw.Do("return b\n", generator.Args{})
 						sw.Do("}\n\n", generator.Args{})
-						fmt.Println(em.Name)
 					}
 				}
 
