@@ -1,6 +1,6 @@
 module github.com/galgotech/builder-gen
 
-go 1.20.11
+go 1.19
 
 require (
 	k8s.io/apimachinery v0.28.4
